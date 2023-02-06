@@ -1,0 +1,17 @@
+pwlf
+numpy
+scikit-learn
+joblib
+tqdm-joblib
+pandas
+utm
+shapely
+pandarallel
+omegaconf
+sumolib
+git+https://github.com/UnivOfAlabama-BittleResearchGroup/innosent-api.git
+pyarrow
+geopandas
+matplotlib
+plotly
+nbformat

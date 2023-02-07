@@ -3,6 +3,7 @@
 .vscode
 data/*
 innosent-api
+*.parquet
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

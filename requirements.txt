@@ -9,9 +9,10 @@ shapely
 pandarallel
 omegaconf
 sumolib
-git+https://github.com/UnivOfAlabama-BittleResearchGroup/innosent-api.git
+# git+https://github.com/UnivOfAlabama-BittleResearchGroup/innosent-api.git
 pyarrow
 geopandas
 matplotlib
 plotly
 nbformat
+json5

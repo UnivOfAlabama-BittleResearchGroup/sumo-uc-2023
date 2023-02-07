@@ -1,8 +1,8 @@
 Metadata:
   # The name will also show up as the main folder for simulation
-  name: CarFollowingDefaults
+  name: VehicleWiseCarFollowingSampling
   author: mcschrader@crimson.ua.edu
-  output: /home/max/tmp/sumo-uc-2023/${Metadata.name}
+  output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
   run_id: ???
   cwd: ${.output}/${.run_id}
   simulation_root: /home/max/Development/sumo-uc-2023/sumo-xml
@@ -29,12 +29,19 @@ Blocks:
     regex: "*/config.yaml"
     root_dir: ${Metadata.output}
 
-  CFSimpleConfig:
-    save_path: ${Metadata.cwd}/cf_simple.xml
-    cf_params:
+  CFTableConfig:
+    table: /home/max/Development/sumo-uc-2023/data/rw_east_thru_summary_accel_decel.csv
+    save_path: ${Metadata.cwd}/vehDescript.xml
+    seed: ${Blocks.SeedConfig.seed}
+    additional_params:
       carFollowingModel: ${Blocks.IteratorConfig.val}
-      emissionClass: "PHEMlight/PC_G_EU4"
+    cf_params:
+      accel: accel
+      decel: decel
+      # freeflow_speed: speedFactor
     vehicle_distribution_name: vehDist
+    sample_mode: independent
+    num_samples: 500
 
   SimulationConfig:
     start_time: 0 # Starts at 5:30AM
@@ -53,7 +60,7 @@ Blocks:
       - ${Metadata.simulation_root}/traffic-lights/63082002.NEMA.Coordinated.xml
       - ${Metadata.simulation_root}/traffic-lights/63082003.NEMA.Coordinated.xml
       - ${Metadata.simulation_root}/traffic-lights/63082004.NEMA.Coordinated.xml
-      - ${Blocks.CFSimpleConfig.save_path}
+      - ${Blocks.CFTableConfig.save_path}
 
     step_length: 0.1
     seed: 42
@@ -115,31 +122,34 @@ Blocks:
 
 Pipeline:
   pipeline:
-    - block: Generate Samples
+    # - block: Generate Samples
+    #   producers:
+    #     - function: producers.generate_iterator
+    #       config: ${Blocks.IteratorConfig}
+    #     - function: producers.generate_random_seed
+    #       config: ${Blocks.SeedConfig}
+    #   consumers:
+        
+    #   parallel: false
+    #   number_of_workers: 1
+
+    - block: Run Simulation
       producers:
         - function: producers.generate_iterator
           config: ${Blocks.IteratorConfig}
         - function: producers.generate_random_seed
           config: ${Blocks.SeedConfig}
       consumers:
-        - function: vehicle_distributions.create_simple_distribution
-          config: ${Blocks.CFSimpleConfig}
+        - function: vehicle_distributions.create_independent_distribution_pandas
+          config: ${Blocks.CFTableConfig}
         - function: io.save_config
           config: ${Blocks.SaveConfig}
-      parallel: false
-      number_of_workers: 1
-
-    - block: Run Simulation
-      producers:
-        - function: producers.read_configs
-          config: ${Blocks.ReadConfig}
-      consumers:
         - function: simulation.run_sumo
           config: ${Blocks.SimulationConfig}
-        - function: emissions.fast_total_energy
-          config: ${Blocks.FuelTotalConfig}
         - function: io.mv_file
           config: ${Blocks.MvFileConfig}
+        - function: emissions.fast_total_energy
+          config: ${Blocks.FuelTotalConfig}
         - function: xml.convert_xml_to_parquet
           config: ${Blocks.XMLConvertConfig}
         - function: xml.convert_xml_to_parquet_pandas
@@ -150,9 +160,8 @@ Pipeline:
             delete_source: true
             elements:
               -
-
       parallel: true
-      number_of_workers: auto
+      number_of_workers: 4
 
   executor: ray
   parallel_proc: auto

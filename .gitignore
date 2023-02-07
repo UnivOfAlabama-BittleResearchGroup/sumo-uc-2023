@@ -4,6 +4,7 @@
 data/*
 innosent-api
 *.parquet
+sumo-xml/detectors/*.out.xml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

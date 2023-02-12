@@ -1,0 +1,81 @@
+Metadata:
+  # The name will also show up as the main folder for simulation
+  name: Calibration
+  author: mcschrader@crimson.ua.edu
+  output: /Users/max/Development/sumo-uc-23/output/${Metadata.name}
+  cwd: ${.output}/${.run_id}
+  run_id: ???
+  simulation_root: /Users/max/Development/sumo-uc-23/sumo-xml
+  random_seed: 42
+
+IteratorConfig:
+  edge_data: /Users/max/Development/sumo-uc-23/data/2023-01-13/counts.parquet
+  turn_data: /Users/max/Development/sumo-uc-23/data/2023-01-13/turns.parquet
+  edge_file: ${Metadata.cwd}/edge.in.xml
+  turn_file: ${Metadata.cwd}/turn.in.xml
+  agg_intervals:
+    - 200
+    - 600
+  iterations: 2
+  seed: ???
+
+RandomRouteConfig:
+  net_file: ${SimulationConfig.net_file}
+  output_file: ${Metadata.cwd}/random.route.xml
+  seed: ${IteratorConfig.seed}
+
+RouteSamplerConfig:
+  random_route_file: ${RandomRouteConfig.output_file}
+  edge_file: ${IteratorConfig.edge_file}
+  turn_file: ${IteratorConfig.turn_file}
+  output_file: ${Metadata.cwd}/route.${Metadata.run_id}.xml
+  seed: ${IteratorConfig.seed}
+  mode: "probability"
+  prefix: ${Metadata.run_id}
+
+SimulationConfig:
+  start_time: 0 # Starts at 5:00AM
+  end_time: 22800 # Ends at 11:50AM
+  net_file: ${Metadata.simulation_root}/net/airport_lowes.net.xml
+  gui: false
+  route_files:
+    - ???
+
+  additional_files:
+    - ${Metadata.simulation_root}/detectors/radar_boxes.xml
+    - ${Metadata.simulation_root}/detectors/two_intersection.e2.detectors.add.xml
+    - ${Metadata.simulation_root}/traffic-lights/63082002.NEMA.Coordinated.xml
+    - ${Metadata.simulation_root}/traffic-lights/63082003.NEMA.Coordinated.xml
+    - ${Metadata.simulation_root}/detectors/edge_detector.add.xml
+    - /Users/max/Development/airport-harper-sumo/sumo-xml/veh-descript/baseVehDescript.in.xml
+
+  step_length: ???
+  additional_sim_params:
+    - --output-prefix
+    - ${Metadata.run_id}_
+    - --seed
+    - ${IteratorConfig.seed}
+    - --fcd-output
+    - ${Metadata.cwd}/fcd.xml
+    - --device.fcd.period
+    - 1
+
+  simulation_output: ${Metadata.cwd}/sumo_output.txt
+
+Pipeline:
+  pipeline:
+    - block: Run Simulation
+      producers:
+        - function: simulation.run_sumo
+          config: ${SimulationConfig}
+        - function: io.mv_file
+          config:
+            mv_files:
+              - source: ${Metadata.simulation_root}/detectors/${Metadata.run_id}_edge.out.xml
+                target: ${Metadata.cwd}/${Metadata.run_id}_edge.out.xml
+
+      parallel: false
+      number_of_workers: auto
+
+  executor: ray
+  parallel_proc: auto

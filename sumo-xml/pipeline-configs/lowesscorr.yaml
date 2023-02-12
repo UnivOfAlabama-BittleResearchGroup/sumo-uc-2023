@@ -1,11 +1,11 @@
 Metadata:
   # The name will also show up as the main folder for simulation
-  name: VehicleWiseCarFollowingSampling
+  name: LowessCorr
   author: mcschrader@crimson.ua.edu
   output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
   run_id: ???
   cwd: ${.output}/${.run_id}
-  simulation_root: /home/max/Development/sumo-uc-2023/sumo-xml
+  simulation_root: /Users/max/Development/sumo-uc-23
   random_seed: 42
 
 Blocks:
@@ -15,7 +15,7 @@ Blocks:
     name: carFollowingModel
     choices:
       - IDM
-      - KraussAB
+      - Krauss
       - EIDM
 
   SeedConfig:
@@ -30,7 +30,7 @@ Blocks:
     root_dir: ${Metadata.output}
 
   CFTableConfig:
-    table: /home/max/Development/sumo-uc-2023/data/rw_east_thru_summary_accel_decel.csv
+    table: ${Metadata.simulation_root}/data/2023-01-13/processed/${Pipeline.pipeline[0].producers[0].config.val}.csv
     save_path: ${Metadata.cwd}/vehDescript.xml
     seed: ${Blocks.SeedConfig.seed}
     additional_params:
@@ -44,22 +44,19 @@ Blocks:
     num_samples: 500
 
   SimulationConfig:
-    start_time: 0 # Starts at 5:30AM
+    start_time: 0 # Starts at 5:00AM
     end_time: 22800 # Ends at 11:50AM
-    net_file: ${Metadata.simulation_root}/net/simplified_reworked.net.xml
+    net_file: ${Metadata.simulation_root}/sumo-xml/net/airport_lowes.net.xml
     gui: false
     route_files:
-      - ${Metadata.simulation_root}/flow/route.0.xml
-      - ${Metadata.simulation_root}/flow/route.1.xml
-      - ${Metadata.simulation_root}/flow/route.2.xml
-      - ${Metadata.simulation_root}/flow/route.3.xml
+      - ${Metadata.simulation_root}/sumo-xml/flow/poisson_good.xml
 
     additional_files:
-      - ${Metadata.simulation_root}/detectors/radar_boxes.xml
-      - ${Metadata.simulation_root}/detectors/e2.detectors.add.xml
-      - ${Metadata.simulation_root}/traffic-lights/63082002.NEMA.Coordinated.xml
-      - ${Metadata.simulation_root}/traffic-lights/63082003.NEMA.Coordinated.xml
-      - ${Metadata.simulation_root}/traffic-lights/63082004.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/radar_boxes.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/two_intersection.e2.detectors.add.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/63082002.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/63082003.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/edge_detector.add.xml
       - ${Blocks.CFTableConfig.save_path}
 
     step_length: 0.1
@@ -70,7 +67,7 @@ Blocks:
       - --fcd-output
       - ${Metadata.cwd}/fcd.xml
       - --fcd-output.filter-shapes
-      - "Radar137_East_thru,Radar136_West_thru"
+      - "Radar137_East_thru"
       - --seed
       - ${Blocks.SeedConfig.seed}
       - --emission-output
@@ -79,6 +76,8 @@ Blocks:
       - 3600
       - --device.emissions.period
       - 1
+      - --default.action-step-length
+      - 0.2
 
     simulation_output: ${Metadata.cwd}/sumo_output.txt
 
@@ -87,8 +86,10 @@ Blocks:
 
   MvFileConfig:
     mv_files:
-      - source: ${Metadata.simulation_root}/detectors/${Metadata.run_id}_detectors.out.xml
+      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
         target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_edge.out.xml
+        target: ${Metadata.cwd}/${Metadata.run_id}_edge.out.xml
 
   XMLConvertConfig:
     source: ${Metadata.cwd}/${Metadata.run_id}_fcd.xml
@@ -117,7 +118,7 @@ Blocks:
     delete_xml: true
     output_time_filter_lower: 3600
     output_time_filter_upper: 19200
-    x_filter: "lambda x: 630 <= x <= 1900"
+    x_filter: "lambda x: 630 <= x <= 1186"
     sim_step: 1
 
 Pipeline:
@@ -125,16 +126,36 @@ Pipeline:
     # - block: Generate Samples
     #   producers:
     #     - function: producers.generate_iterator
+    #       config: 
+    #         val: corr_lowess
+    #         name: veh_sampling_file
+    #         choices:
+    #           - corr_lowess
+    #           - corr_pwlf
+    #           - uncor_lowess
+    #           - uncor_pwlf
+    #     - function: producers.generate_iterator
     #       config: ${Blocks.IteratorConfig}
     #     - function: producers.generate_random_seed
     #       config: ${Blocks.SeedConfig}
     #   consumers:
-        
+    #     - function: vehicle_distributions.create_distribution_pandas
+    #       config: ${Blocks.CFTableConfig}
+    #     - function: io.save_config
+    #       config: ${Blocks.SaveConfig}
     #   parallel: false
     #   number_of_workers: 1
-
     - block: Run Simulation
       producers:
+        - function: producers.generate_iterator
+          config: 
+            val: corr_lowess
+            name: veh_sampling_file
+            choices:
+              - corr_lowess
+              - corr_pwlf
+              - uncor_lowess
+              - uncor_pwlf
         - function: producers.generate_iterator
           config: ${Blocks.IteratorConfig}
         - function: producers.generate_random_seed
@@ -152,14 +173,14 @@ Pipeline:
           config: ${Blocks.FuelTotalConfig}
         - function: xml.convert_xml_to_parquet
           config: ${Blocks.XMLConvertConfig}
-        - function: xml.convert_xml_to_parquet_pandas
-          config:
-            source: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
-            target: ${Metadata.cwd}/detectors.parquet
-            format: parquet
-            delete_source: true
-            elements:
-              -
+        # - function: xml.convert_xml_to_parquet_pandas
+        #   config:
+        #     source: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+        #     target: ${Metadata.cwd}/detectors.parquet
+        #     format: parquet
+        #     delete_source: true
+        #     elements:
+        #       -
       parallel: true
       number_of_workers: 4
 

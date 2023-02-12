@@ -12,10 +12,10 @@ Blocks:
   # this method doesn't allow for multiple blocks of the same type
   IteratorConfig:
     val: ???
-    name: carFollowingModel
+    name: carFollowModel
     choices:
       - IDM
-      - KraussAB
+      - Krauss
       - EIDM
 
   SeedConfig:
@@ -32,8 +32,9 @@ Blocks:
   CFSimpleConfig:
     save_path: ${Metadata.cwd}/cf_simple.xml
     cf_params:
-      carFollowingModel: ${Blocks.IteratorConfig.val}
+      carFollowModel: ${Blocks.IteratorConfig.val}
       emissionClass: "PHEMlight/PC_G_EU4"
+      actionStepLength: "0.2"
     vehicle_distribution_name: vehDist
 
   SimulationConfig:
@@ -106,7 +107,7 @@ Blocks:
 
   FuelTotalConfig:
     emissions_xml: ${Metadata.cwd}/${Metadata.run_id}_emissions.out.xml
-    output_path: ${Metadata.cwd}/fuel_total.txt
+    output_path: ${Metadata.cwd}/fuel_step.txt
     delete_xml: true
     output_time_filter_lower: 3600
     output_time_filter_upper: 19200
@@ -115,7 +116,7 @@ Blocks:
 
 Pipeline:
   pipeline:
-    - block: Generate Samples
+    - block: Run Simulation
       producers:
         - function: producers.generate_iterator
           config: ${Blocks.IteratorConfig}
@@ -126,17 +127,9 @@ Pipeline:
           config: ${Blocks.CFSimpleConfig}
         - function: io.save_config
           config: ${Blocks.SaveConfig}
-      parallel: false
-      number_of_workers: 1
-
-    - block: Run Simulation
-      producers:
-        - function: producers.read_configs
-          config: ${Blocks.ReadConfig}
-      consumers:
         - function: simulation.run_sumo
           config: ${Blocks.SimulationConfig}
-        - function: emissions.fast_total_energy
+        - function: emissions.fast_timestep_energy
           config: ${Blocks.FuelTotalConfig}
         - function: io.mv_file
           config: ${Blocks.MvFileConfig}
@@ -150,7 +143,7 @@ Pipeline:
             delete_source: true
             elements:
               -
-
+      
       parallel: true
       number_of_workers: auto
 

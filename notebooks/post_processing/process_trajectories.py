@@ -43,7 +43,7 @@ def load_fcd(config):
 polygon_dict = {
     poly.id: Polygon(poly.shape)
     for poly in polys
-    if poly.id in ["Radar137_East_thru", "Radar136_West_thru"]
+    if poly.id in ["Radar137_East_thru", ] #"Radar136_West_thru"]
 }
 
 def label_polygons(fcd_df):
@@ -65,7 +65,7 @@ for config in configs:
     for box_group in fcd_df.groupby('box'):
         box = box_group[0]
         box_df = box_group[1]
-        res = process_trajectories(box_df, time_col="time", speed_col="speed", n_jobs=-1)
+        res = process_trajectories(box_df, time_col="time", speed_col="speed", n_jobs=48)
         summary_df = pd.DataFrame([{**v, **l} for v in res for l in v.pop("line_fits")])
         summary_df["type"] = summary_df.apply(classify, axis=1)
         summary_df["minimum_time"] = summary_df["end"] - summary_df["start"]

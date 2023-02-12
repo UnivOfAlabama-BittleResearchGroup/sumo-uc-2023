@@ -2,7 +2,7 @@ Metadata:
   # The name will also show up as the main folder for simulation
   name: VehicleWiseCarFollowingSampling
   author: mcschrader@crimson.ua.edu
-  output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
+  output: /home/max/tmp/sumo-uc-2023/${Metadata.name}
   run_id: ???
   cwd: ${.output}/${.run_id}
   simulation_root: /home/max/Development/sumo-uc-2023/sumo-xml
@@ -12,10 +12,10 @@ Blocks:
   # this method doesn't allow for multiple blocks of the same type
   IteratorConfig:
     val: ???
-    name: carFollowingModel
+    name: carFollowModel
     choices:
       - IDM
-      - KraussAB
+      - Krauss
       - EIDM
 
   SeedConfig:
@@ -34,11 +34,14 @@ Blocks:
     save_path: ${Metadata.cwd}/vehDescript.xml
     seed: ${Blocks.SeedConfig.seed}
     additional_params:
-      carFollowingModel: ${Blocks.IteratorConfig.val}
+      carFollowModel: ${Blocks.IteratorConfig.val}
+      actionStepLength: "0.2"
     cf_params:
       accel: accel
       decel: decel
-      # freeflow_speed: speedFactor
+      speedFactor: speedFactor
+      emissionClass: emissionClass
+
     vehicle_distribution_name: vehDist
     sample_mode: row-wise
     num_samples: 500
@@ -122,16 +125,6 @@ Blocks:
 
 Pipeline:
   pipeline:
-    # - block: Generate Samples
-    #   producers:
-    #     - function: producers.generate_iterator
-    #       config: ${Blocks.IteratorConfig}
-    #     - function: producers.generate_random_seed
-    #       config: ${Blocks.SeedConfig}
-    #   consumers:
-        
-    #   parallel: false
-    #   number_of_workers: 1
 
     - block: Run Simulation
       producers:
@@ -148,7 +141,7 @@ Pipeline:
           config: ${Blocks.SimulationConfig}
         - function: io.mv_file
           config: ${Blocks.MvFileConfig}
-        - function: emissions.fast_total_energy
+        - function: emissions.fast_timestep_energy
           config: ${Blocks.FuelTotalConfig}
         - function: xml.convert_xml_to_parquet
           config: ${Blocks.XMLConvertConfig}

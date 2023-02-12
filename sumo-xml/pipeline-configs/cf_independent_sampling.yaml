@@ -12,10 +12,10 @@ Blocks:
   # this method doesn't allow for multiple blocks of the same type
   IteratorConfig:
     val: ???
-    name: carFollowingModel
+    name: carFollowModel
     choices:
       - IDM
-      - KraussAB
+      - Krauss
       - EIDM
 
   SeedConfig:
@@ -34,7 +34,8 @@ Blocks:
     save_path: ${Metadata.cwd}/vehDescript.xml
     seed: ${Blocks.SeedConfig.seed}
     additional_params:
-      carFollowingModel: ${Blocks.IteratorConfig.val}
+      carFollowModel: ${Blocks.IteratorConfig.val}
+      actionStepLength: "0.2"
     cf_params:
       accel: accel
       decel: decel
@@ -79,6 +80,8 @@ Blocks:
       - 3600
       - --device.emissions.period
       - 1
+      - --default.action-step-length
+      - 0.2
 
     simulation_output: ${Metadata.cwd}/sumo_output.txt
 

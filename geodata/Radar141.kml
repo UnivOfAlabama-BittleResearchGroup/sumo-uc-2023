@@ -383,7 +383,7 @@
 			<styleUrl>#m_ylw-pushpin</styleUrl>
 			<Point>
 				<gx:drawOrder>1</gx:drawOrder>
-				<coordinates>-87.61426751350537,33.23470889034432,300</coordinates>
+				<coordinates>-87.61426751350537,33.23470889034432,297</coordinates>
 			</Point>
 		</Placemark>
 	</Folder>

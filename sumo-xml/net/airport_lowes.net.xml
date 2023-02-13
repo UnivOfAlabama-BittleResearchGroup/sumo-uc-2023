@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2023-02-11 13:16:39 by Eclipse SUMO netedit Version v1_16_0+0059-49cd9d99fb9
+<!-- generated on 2023-02-12 08:30:57 by Eclipse SUMO netedit Version v1_16_0+0059-49cd9d99fb9
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
 
     <input>
-        <sumo-net-file value="/Users/max/Development/sumo-uc-23/sumo-xml/net/airport_lowes.net.xml"/>
+        <sumo-net-file value="./sumo-xml/net/airport_lowes.net.xml"/>
     </input>
 
     <output>
-        <output-file value="/Users/max/Development/sumo-uc-23/sumo-xml/net/airport_lowes.net.xml"/>
+        <output-file value="./sumo-xml/net/airport_lowes.net.xml"/>
         <output.street-names value="true"/>
     </output>
 

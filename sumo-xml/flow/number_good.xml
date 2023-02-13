@@ -2,14 +2,14 @@
 
 <!-- generated on 2023-02-11 16:35:28.503406 by routeSampler.py v1_16_0+0059-49cd9d99fb9
 <configuration>
-    <edgedata-files value="/Users/max/Development/sumo-uc-23/output/Calibration/02.11.2023_16.35.23/0/edge.in.xml"/>
+    <edgedata-files value="/Users/max/Development/sumo-uc-2023/output/Calibration/02.11.2023_16.35.23/0/edge.in.xml"/>
     <optimize value="full"/>
-    <output-file value="/Users/max/Development/sumo-uc-23/output/Calibration/02.11.2023_16.35.23/0/route.0.xml"/>
+    <output-file value="/Users/max/Development/sumo-uc-2023/output/Calibration/02.11.2023_16.35.23/0/route.0.xml"/>
     <prefix value="0"/>
-    <route-files value="/Users/max/Development/sumo-uc-23/output/Calibration/02.11.2023_16.35.23/0/random.route.xml"/>
+    <route-files value="/Users/max/Development/sumo-uc-2023/output/Calibration/02.11.2023_16.35.23/0/random.route.xml"/>
     <seed value="670487"/>
     <threads value="4"/>
-    <turn-files value="/Users/max/Development/sumo-uc-23/output/Calibration/02.11.2023_16.35.23/0/turn.in.xml"/>
+    <turn-files value="/Users/max/Development/sumo-uc-2023/output/Calibration/02.11.2023_16.35.23/0/turn.in.xml"/>
     <attributes value="departSpeed=&quot;max&quot; type=&quot;vehDist&quot; departLane=&quot;best&quot;"/>
     <weighted value="True"/>
     <write-flows value="number"/>

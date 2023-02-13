@@ -2,10 +2,10 @@ Metadata:
   # The name will also show up as the main folder for simulation
   name: CarFollowingDefaults
   author: mcschrader@crimson.ua.edu
-  output: /Users/max/Development/sumo-uc-23/output/${Metadata.name}
+  output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
   run_id: ???
   cwd: ${.output}/${.run_id}
-  simulation_root: /Users/max/Development/sumo-uc-23/sumo-xml
+  simulation_root: ${oc.env:SUMO_UC_2023}
   random_seed: 42
 
 Blocks:
@@ -26,10 +26,6 @@ Blocks:
       - 1000
     seed: ???
 
-  ReadConfig:
-    regex: "*/config.yaml"
-    root_dir: ${Metadata.output}
-
   CFSimpleConfig:
     save_path: ${Metadata.cwd}/cf_simple.xml
     cf_params:
@@ -41,17 +37,17 @@ Blocks:
   SimulationConfig:
     start_time: 0 # Starts at 5:00AM
     end_time: 22800 # Ends at 11:50AM
-    net_file: ${Metadata.simulation_root}/net/airport_lowes.net.xml
+    net_file: ${Metadata.simulation_root}/sumo-xml/net/airport_lowes.net.xml
     gui: false
     route_files:
-      - ${Metadata.simulation_root}/flow/poisson_good.xml
+      - ${Metadata.simulation_root}/sumo-xml/flow/poisson_good.xml
 
     additional_files:
-      - ${Metadata.simulation_root}/detectors/radar_boxes.xml
-      - ${Metadata.simulation_root}/detectors/two_intersection.e2.detectors.add.xml
-      - ${Metadata.simulation_root}/traffic-lights/63082002.NEMA.Coordinated.xml
-      - ${Metadata.simulation_root}/traffic-lights/63082003.NEMA.Coordinated.xml
-      - ${Metadata.simulation_root}/detectors/edge_detector.add.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/radar_boxes.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/two_intersection.e2.detectors.add.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/63082002.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/63082003.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/edge_detector.add.xml
       - ${Blocks.CFSimpleConfig.save_path}
 
     step_length: 0.1
@@ -81,9 +77,9 @@ Blocks:
 
   MvFileConfig:
     mv_files:
-      - source: ${Metadata.simulation_root}/detectors/${Metadata.run_id}_detectors.out.xml
+      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
         target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
-      - source: ${Metadata.simulation_root}/detectors/${Metadata.run_id}_edge.out.xml
+      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_edge.out.xml
         target: ${Metadata.cwd}/${Metadata.run_id}_edge.out.xml
       
 
@@ -132,23 +128,16 @@ Pipeline:
           config: ${Blocks.SaveConfig}
         - function: simulation.run_sumo
           config: ${Blocks.SimulationConfig}
-        - function: emissions.fast_timestep_energy
+        - function: emissions.fast_total_energy
           config: ${Blocks.FuelTotalConfig}
         - function: io.mv_file
           config: ${Blocks.MvFileConfig}
         - function: xml.convert_xml_to_parquet
           config: ${Blocks.XMLConvertConfig}
-        # - function: xml.convert_xml_to_parquet_pandas
-        #   config:
-        #     source: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
-        #     target: ${Metadata.cwd}/detectors.parquet
-        #     format: parquet
-        #     delete_source: true
-        #     elements:
-        #       -
+
 
       parallel: true
-      number_of_workers: auto
+      number_of_workers: 64
 
   executor: ray
   parallel_proc: auto

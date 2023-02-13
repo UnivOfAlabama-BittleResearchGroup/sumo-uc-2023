@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 
-def recursive_root(path: str, find="sumo-uc-23"):
+def recursive_root(path: str, find="sumo-uc-2023"):
     if os.path.split(path)[-1] == find:
         return Path(path)
     return recursive_root(os.path.split(path)[0], find=find)
@@ -237,22 +237,131 @@ def find_headway(fcd_df_copy):
     return dist.loc[dist["mean"] < 5].copy()
 
 
+target_df = pd.read_parquet(ROOT / Path("data/2023-01-13/count_data.parquet"))
+box_to_edge = {
+    "radar137": {
+        "East thru": "gneE11",
+        "East left": "gneE31",
+        "South left": "gneE0.12",
+        "South right": "Airport_to_US69",
+    },
+    "radar136": {"West thru": "834845345#2", "West right": "8884863"},
+    "radar141": {},
+    "radar142": {},
+}
+target_df["edge_relation"] = target_df.groupby("radar")["box"].transform(
+    lambda x: x.map(box_to_edge[x.name])
+)
+START_TIME = target_df.cross_time.min().replace(minute=0, second=0, microsecond=0)
+END_TIME = target_df.cross_time.max().replace(
+    hour=12, minute=0, second=0, microsecond=0
+)
+count_df = target_df.loc[
+    (target_df["cross_time"] >= START_TIME) & (target_df["cross_time"] <= END_TIME)
+].copy()
+counts = (
+    pd.get_dummies(
+        count_df["edge_relation"],
+    )
+    .set_index(
+        count_df["cross_time"],
+    )
+    .resample("1S")
+    .sum()
+    .fillna(0)
+    .astype(int)
+)
+p = 600
+counts_df = counts.resample(f"{p}S").sum()
+
+
+from sumolib.xml import parse_fast_nested
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 from joblib import Parallel, delayed
+import numpy as np
 
 
+def geh(m, c):
+    return np.sqrt(2 * (m - c) ** 2 / (m + c))
 
-for config in configs:
+
+def calibrate(config):
+    res = pd.DataFrame(
+        [
+            {
+                "begin": x[0].begin,
+                "id": x[1].id,
+                "sampledSeconds": x[1].sampledSeconds,
+                "departed": x[1].entered,
+            }
+            for x in parse_fast_nested(
+                str(
+                    Path(config.Metadata.cwd)
+                    / Path(f"{config.Metadata.run_id}_edge.out.xml")
+                ),
+                "interval",
+                ("begin"),
+                "edge",
+                ("id", "sampledSeconds", "entered"),
+            )
+        ]
+    )
+
+    res[["begin", "sampledSeconds", "departed"]] = res[
+        ["begin", "sampledSeconds", "departed"]
+    ].astype(float)
+    res["dt"] = res["begin"].apply(lambda x: START_TIME + pd.Timedelta(seconds=x))
+    pivoted_res = pd.pivot(res, index="dt", columns="id", values=["departed"])
+    pivoted_res = pivoted_res.resample(f"{p}S").sum()
+
+    gehs = []
+    for box in ["West thru", "East thru", "West right", "South left", "South right"]:
+        for key in box_to_edge:
+            if box in box_to_edge[key]:
+                radar = key
+                break
+        edge = box_to_edge[radar][box]
+        gehs.append(
+            (
+                box,
+                (
+                    geh(
+                        m=pivoted_res[("departed", edge)] * 3600 / p,
+                        c=counts_df[edge] * 3600 / p,
+                    )
+                    < 5
+                ).sum()
+                / len(pivoted_res),
+            )
+        )
+
+    return pd.DataFrame(gehs, columns=["box", "geh"])
+
+
+for config in tqdm(configs):
+    print(config.Metadata.cwd)
+    if (
+        Path(config.Metadata.cwd)
+        / "Radar137_East_thru_pwlf_summary_df.parquet"
+    ).exists():
+        continue
+
 
     fcd_df = load_fcd(config)
     fcd_df = label_polygons(fcd_df)
     # drop all rows without a box
     fcd_df = fcd_df[fcd_df["box"] != ""].copy()
 
+
+
+    # calculate the calibration score
+    calib_df = calibrate(config)
+    calib_df.to_parquet(Path(config.Metadata.cwd) / "calibration_df.parquet")
+
     for box_id, box_df in fcd_df.groupby("box"):
         lowess_data = []
-        for veh_id, veh_df in tqdm(box_df.groupby("id")):
+        for veh_id, veh_df in box_df.groupby("id"):
             x, y = get_xy(veh_df)
             if len(x) < 3:
                 continue
@@ -299,4 +408,3 @@ for config in configs:
         pwlf_df.to_parquet(
             Path(config.Metadata.cwd) / f"{box_id}_pwlf_summary_df.parquet"
         )
-

@@ -2,15 +2,15 @@ Metadata:
   # The name will also show up as the main folder for simulation
   name: Calibration
   author: mcschrader@crimson.ua.edu
-  output: /Users/max/Development/sumo-uc-23/output/${Metadata.name}
+  output: /Users/max/Development/sumo-uc-2023/output/${Metadata.name}
   cwd: ${.output}/${.run_id}
   run_id: ???
-  simulation_root: /Users/max/Development/sumo-uc-23/sumo-xml
+  simulation_root: /Users/max/Development/sumo-uc-2023/sumo-xml
   random_seed: 42
 
 IteratorConfig:
-  edge_data: /Users/max/Development/sumo-uc-23/data/2023-01-13/counts.parquet
-  turn_data: /Users/max/Development/sumo-uc-23/data/2023-01-13/turns.parquet
+  edge_data: /Users/max/Development/sumo-uc-2023/data/2023-01-13/counts.parquet
+  turn_data: /Users/max/Development/sumo-uc-2023/data/2023-01-13/turns.parquet
   edge_file: ${Metadata.cwd}/edge.in.xml
   turn_file: ${Metadata.cwd}/turn.in.xml
   agg_intervals:

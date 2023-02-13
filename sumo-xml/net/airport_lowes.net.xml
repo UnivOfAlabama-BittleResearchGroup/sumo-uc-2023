@@ -4,11 +4,11 @@
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
 
     <input>
-        <sumo-net-file value="./sumo-xml/net/airport_lowes.net.xml"/>
+        <sumo-net-file value="/Users/max/Development/sumo-uc-2023/sumo-xml/net/airport_lowes.net.xml"/>
     </input>
 
     <output>
-        <output-file value="./sumo-xml/net/airport_lowes.net.xml"/>
+        <output-file value="/Users/max/Development/sumo-uc-2023/sumo-xml/net/airport_lowes.net.xml"/>
         <output.street-names value="true"/>
     </output>
 

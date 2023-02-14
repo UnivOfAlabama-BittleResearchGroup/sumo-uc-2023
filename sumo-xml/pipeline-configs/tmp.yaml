@@ -1,0 +1,128 @@
+Metadata:
+  name: CarFollowingDefaults
+  author: mcschrader@crimson.ua.edu
+  output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
+  run_id: "12"
+  cwd: ${.output}/${.run_id}
+  simulation_root: ${oc.env:SUMO_UC_2023}
+  random_seed: 42
+
+Blocks:
+  FuelTotalConfig:
+    emissions_xml: ${Metadata.cwd}/${Metadata.run_id}_emissions.out.xml
+    output_path: ${Metadata.cwd}/fuel_step.txt
+    sim_step: 0.1
+    delete_xml: true
+    vehicle_average: false
+    output_time_filter_lower: 3600
+    output_time_filter_upper: 19200
+    gasoline_filter: null
+    diesel_filter: null
+    x_filter: 'lambda x: 630 <= x <= 1186'
+    y_filter: null
+  IteratorConfig:
+    name: dummy
+    val: ???
+    choices:
+    - 0
+  ReadConfig: ???
+  SeedConfig:
+    num_samples: 30
+    seed: 718
+    range:
+    - 0
+    - 1000
+  CFSimpleConfig:
+    save_path: ${Metadata.cwd}/cf_simple.xml
+    vehicle_distribution_name: vehDist
+    cf_params:
+      carFollowModel: ${Blocks.IteratorConfig.val}
+      emissionClass: PHEMlight/PC_G_EU4
+      actionStepLength: '0.2'
+  CFTableConfig: ???
+  MvFileConfig:
+    mv_files:
+    - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
+      target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+    - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_edge.out.xml
+      target: ${Metadata.cwd}/${Metadata.run_id}_edge.out.xml
+  SaveConfig:
+    save_path: ${Metadata.cwd}/config.yaml
+  _MvFilePair: ???
+  SimulationConfig:
+    start_time: 0
+    end_time: 22800
+    net_file: ${Metadata.simulation_root}/sumo-xml/net/airport_lowes.net.xml
+    gui: false
+    route_files:
+    - ${Metadata.simulation_root}/sumo-xml/flow/poisson_good.xml
+    additional_files:
+    - ${Metadata.simulation_root}/sumo-xml/detectors/radar_boxes.xml
+    - ${Metadata.simulation_root}/sumo-xml/detectors/two_intersection.e2.detectors.add.xml
+    - ${Metadata.simulation_root}/sumo-xml/traffic-lights/63082002.NEMA.Coordinated.xml
+    - ${Metadata.simulation_root}/sumo-xml/traffic-lights/63082003.NEMA.Coordinated.xml
+    - ${Metadata.simulation_root}/sumo-xml/detectors/edge_detector.add.xml
+    - /Volumes/BittleLab/7 DOE Project/sumo-uc-23/CarFollowingDefaults/02.13.2023_07.51.08/12/cf_simple.xml
+    step_length: 0.1
+    seed: 42
+    additional_sim_params:
+    - --output-prefix
+    - ${Metadata.run_id}_
+    - --fcd-output
+    - ${Metadata.cwd}/fcd.xml
+    - --fcd-output.filter-shapes
+    - Radar137_East_thru
+    - --seed
+    - ${Blocks.SeedConfig.seed}
+    - --emission-output
+    - ${Metadata.cwd}/emissions.out.xml
+    - --device.emissions.begin
+    - '3600'
+    - --device.emissions.period
+    - '0.1'
+    - --default.action-step-length
+    - '0.2'
+    simulation_output: ${Metadata.cwd}/sumo_output.txt
+  XMLConvertConfig:
+    source: ${Metadata.cwd}/${Metadata.run_id}_fcd.xml
+    target: ${Metadata.cwd}/fcd.parquet
+    elements:
+    - name: timestep
+      attributes:
+      - time
+    - name: vehicle
+      attributes:
+      - id
+      - x
+      - 'y'
+      - z
+      - angle
+      - type
+      - speed
+      - pos
+      - lane
+    format: parquet
+    delete_source: true
+Pipeline:
+  pipeline:
+    - block: Run Simulation
+      producers:
+        - function: producers.generate_iterator
+          config: ${Blocks.IteratorConfig}
+      consumers:
+        - function: io.save_config
+          config: ${Blocks.SaveConfig}
+        - function: simulation.run_sumo
+          config: ${Blocks.SimulationConfig}
+        - function: emissions.fast_total_energy
+          config: ${Blocks.FuelTotalConfig}
+        - function: io.mv_file
+          config: ${Blocks.MvFileConfig}
+        - function: xml.convert_xml_to_parquet
+          config: ${Blocks.XMLConvertConfig}
+
+      parallel: false
+      number_of_workers: 1
+
+  executor: ray
+  parallel_proc: auto

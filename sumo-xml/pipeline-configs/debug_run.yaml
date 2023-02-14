@@ -1,0 +1,117 @@
+Metadata:
+  # The name will also show up as the main folder for simulation
+  name: DebugRun
+  author: mcschrader@crimson.ua.edu
+  output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
+  run_id: 10
+  cwd: ${.output}/${.run_id}
+  simulation_root: ${oc.env:SUMO_UC_2023}
+  random_seed: 42
+
+Blocks:
+  IteratorConfig:
+    name: dummy
+    val: ???
+    choices:
+    - 0
+    
+  SimulationConfig:
+    start_time: 0 # Starts at 5:00AM
+    end_time: 22800 # Ends at 11:50AM
+    net_file: ${Metadata.simulation_root}/sumo-xml/net/airport_lowes.net.xml
+    gui: true
+    route_files:
+      - ${Metadata.simulation_root}/sumo-xml/flow/poisson_good.xml
+
+    additional_files:
+      - ${Metadata.simulation_root}/sumo-xml/detectors/radar_boxes.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/two_intersection.e2.detectors.add.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/63082002.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/63082003.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/edge_detector.add.xml
+      - "/Volumes/BittleLab/7 DOE Project/sumo-uc-23/SampledDistribution/02.12.2023_13.28.23/10/vehDescript.xml"
+
+    step_length: 0.1
+    seed: 42
+    additional_sim_params:
+      - --output-prefix
+      - ${Metadata.run_id}_
+      - --fcd-output
+      - ${Metadata.cwd}/fcd.xml
+      - --fcd-output.filter-shapes
+      - "Radar137_East_thru"
+      - --seed
+      - 692
+      - --emission-output
+      - ${Metadata.cwd}/emissions.out.xml
+      - --device.emissions.begin
+      - 3600
+      - --device.emissions.period
+      - 0.1
+      - --default.action-step-length
+      - 0.2
+
+    simulation_output: ${Metadata.cwd}/sumo_output.txt
+
+  SaveConfig:
+    save_path: ${Metadata.cwd}/config.yaml
+
+  MvFileConfig:
+    mv_files:
+      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
+        target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_edge.out.xml
+        target: ${Metadata.cwd}/${Metadata.run_id}_edge.out.xml
+  XMLConvertConfig:
+    source: ${Metadata.cwd}/${Metadata.run_id}_fcd.xml
+    target: ${Metadata.cwd}/fcd.parquet
+    format: parquet
+    delete_source: true
+    elements:
+      - name: timestep
+        attributes:
+          - time
+      - name: vehicle
+        attributes:
+          - id
+          - x
+          - "y"
+          - z
+          - angle
+          - type
+          - speed
+          - pos
+          - lane
+
+  FuelTotalConfig:
+    emissions_xml: ${Metadata.cwd}/${Metadata.run_id}_emissions.out.xml
+    output_path: ${Metadata.cwd}/fuel_step.txt
+    delete_xml: true
+    output_time_filter_lower: 3600
+    output_time_filter_upper: 19200
+    x_filter: "lambda x: 630 <= x <= 1186"
+    sim_step: 0.1
+
+Pipeline:
+  pipeline:
+    - block: Run Simulation
+      producers:
+        - function: producers.generate_iterator
+          config: ${Blocks.IteratorConfig}
+      consumers:
+        - function: io.save_config
+          config: ${Blocks.SaveConfig}
+        - function: simulation.run_sumo
+          config: ${Blocks.SimulationConfig}
+        - function: emissions.fast_total_energy
+          config: ${Blocks.FuelTotalConfig}
+        - function: io.mv_file
+          config: ${Blocks.MvFileConfig}
+        - function: xml.convert_xml_to_parquet
+          config: ${Blocks.XMLConvertConfig}
+
+      parallel: false
+      number_of_workers: 1
+
+  executor: ray
+  parallel_proc: auto
